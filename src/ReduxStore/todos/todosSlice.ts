@@ -1,62 +1,113 @@
 import { createSlice, PayloadAction, createSelector } from '@reduxjs/toolkit'
-import initialTodos from './initialTodos'
-import { TodoItem } from '@/types/data/todos'
+import { TodoItem, TodoItemData } from '@/types/data/todos'
 import { RootState } from '@/ReduxStore'
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 
 export interface TodosState {
-  todos: TodoItem[]
+  deletingTodoId: TodoItem['id'] | undefined
+  modifyingTodoId: TodoItem['id'] | undefined
   selectedTodoId: TodoItem['id'] | undefined
 }
 
 const initialState: TodosState = {
-  todos: initialTodos,
+  deletingTodoId: undefined,
   selectedTodoId: undefined,
+  modifyingTodoId: undefined,
 }
+
+export const todosApiSlice = createApi({
+  baseQuery: fetchBaseQuery({
+    baseUrl: 'http://localhost:1337/api',
+  }),
+  tagTypes: ['Todos'],
+  endpoints: (builder) => ({
+    fetchTodos: builder.query<TodoItem[], void>({
+      query: () => '/todos',
+      transformResponse: (response: any) => {
+        console.log('response: ', response)
+        return response
+      },
+      providesTags: ['Todos'],
+    }),
+    createTodo: builder.mutation<{ todo: TodoItemData }, TodoItem>({
+      query: (todo) => ({
+        url: `/todos`,
+        method: 'POST',
+        body: { data: todo },
+      }),
+      invalidatesTags: ['Todos'],
+    }),
+    removeTodo: builder.mutation<boolean, TodoItem>({
+      query: (todo) => ({
+        url: `todos/${todo.id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Todos'],
+      onQueryStarted: async (todo, { dispatch, queryFulfilled }) => {
+        dispatch(setDeletingTodoId(todo.id))
+        await queryFulfilled
+        dispatch(setDeletingTodoId(undefined))
+      },
+    }),
+    updateTodo: builder.mutation<{ todo: TodoItemData }, TodoItem>({
+      query: (todo) => ({
+        url: `/todos/${todo.id}`,
+        method: 'PUT',
+      }),
+      invalidatesTags: ['Todos'],
+      onQueryStarted: async (todo, { dispatch, queryFulfilled }) => {
+        dispatch(setModifyingTodoId(todo.id))
+        await queryFulfilled
+        dispatch(setModifyingTodoId(undefined))
+      },
+    }),
+  }),
+})
+
+export const {
+  useFetchTodosQuery,
+  useCreateTodoMutation,
+  useUpdateTodoMutation,
+  useRemoveTodoMutation,
+} = todosApiSlice
 
 export const todosSlice = createSlice({
   name: 'todos',
   initialState,
   reducers: {
-    setTodos: (state: TodosState, action: PayloadAction<TodoItem[]>) => {
-      state.todos = action.payload
-    },
-    addTodo: (state: TodosState, action: PayloadAction<TodoItem>) => {
-      state.todos.push(action.payload)
-    },
-    removeTodo: (state: TodosState, action: PayloadAction<TodoItem>) => {
-      state.todos = state.todos.filter((todo) => todo.id !== action.payload.id)
-    },
     selectTodo: (state: TodosState, action: PayloadAction<string>) => {
       state.selectedTodoId = action.payload
     },
-    addCycleInTodo: (state: TodosState, action: PayloadAction<void>) => {
-      if (state.selectedTodoId) {
-        state.todos = state.todos.map((todo) => {
-          if (todo.id === state.selectedTodoId) {
-            todo.currentCycles < todo.targetCycles && todo.currentCycles++
-            return todo
-          }
-          return todo
-        })
-      }
+    setDeletingTodoId: (state, action: PayloadAction<string | undefined>) => {
+      state.deletingTodoId = action.payload
+    },
+    setModifyingTodoId: (state, action: PayloadAction<string | undefined>) => {
+      state.modifyingTodoId = action.payload
+    },
+    resetTodosSlice: () => {
+      return initialState
     },
   },
 })
 
-export const { setTodos, addTodo, removeTodo, selectTodo, addCycleInTodo } =
-  todosSlice.actions
+export const {
+  selectTodo,
+  setDeletingTodoId,
+  resetTodosSlice,
+  setModifyingTodoId,
+} = todosSlice.actions
 
-//this is to memoize the selection of one Item, if the idToSelect or the item itself does not change, then the cached item is returned without filtering again
-export const getSelectedTodo = createSelector(
-  (state: RootState) => state.todos,
-  (todos) => {
-    if (todos.selectedTodoId) {
-      return todos.todos.find(
-        (todo: TodoItem) => todo.id === todos.selectedTodoId
-      )
-    }
-    return null
-  }
-)
+export const resetUsersApiSlice = () => todosApiSlice.util.resetApiState()
+
+export const initialiseTodosApi = () =>
+  todosApiSlice.endpoints.fetchTodos.initiate()
+
+//this is a  curried function,  This pattern allows you to create a reusable function that generates a new function specific to your use case. In this case, getSelectedUser can be partially applied with the users array, and then you can apply the generated function with the state argument later. This separation of concerns makes the code more modular and flexible.
+
+export const getSelectedTodo = (todos?: TodoItem[]) => (state: RootState) => {
+  return todos && state.todos.selectedTodoId
+    ? todos.find((todo) => todo.id === state.todos.selectedTodoId)
+    : null
+}
 
 export default todosSlice.reducer
