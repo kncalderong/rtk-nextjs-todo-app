@@ -1,29 +1,30 @@
 'use client'
 
-import { addTodo } from '@/ReduxStore/todos/todosSlice'
-import { useAppDispatch } from '@/hooks/reduxStore'
-import React, { useRef } from 'react'
-import { v4 as uuidv4 } from 'uuid'
+import { useCreateTodoMutation } from '@/ReduxStore/todos/todosSlice'
+import React, { useEffect, useRef } from 'react'
 
 const AddTodo = () => {
   const textRef = useRef<HTMLInputElement>(null)
   const targetCyclesRef = useRef<HTMLInputElement>(null)
-  const dispatch = useAppDispatch()
 
-  const createTodo = (e: React.FormEvent) => {
+  const [addTodo, { isLoading: isAddingTodo, isSuccess: isAddTodoSuccess }] =
+    useCreateTodoMutation()
+
+  const createTodo = async (e: React.FormEvent) => {
     e.preventDefault()
-    const todoId = uuidv4()
-    console.log('textRef: ', textRef.current!.value)
-    dispatch(
-      addTodo({
-        id: todoId,
-        text: textRef.current!.value,
-        targetCycles: +targetCyclesRef.current!.value,
-        currentCycles: 0,
-      })
-    )
-    resetForm()
+
+    addTodo({
+      text: textRef.current!.value,
+      targetCycles: +targetCyclesRef.current!.value,
+      currentCycles: 0,
+    })
   }
+
+  useEffect(() => {
+    if (isAddTodoSuccess) {
+      resetForm()
+    }
+  }, [isAddTodoSuccess])
 
   const resetForm = () => {
     textRef.current!.value = ''
@@ -58,8 +59,9 @@ const AddTodo = () => {
         <button
           type='submit'
           className='border border-slate-300 text-slate-500 px-2 py-1 rounded hover:bg-slate-700 hover:text-slate-200 focus-within:bg-slate-700 outline-none'
+          disabled={isAddingTodo}
         >
-          Create
+          {isAddingTodo ? 'Adding...' : 'Add Todo'}
         </button>
       </div>
     </form>
