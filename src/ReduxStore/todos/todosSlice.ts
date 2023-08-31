@@ -29,10 +29,22 @@ export const todosSlice = createSlice({
     selectTodo: (state: TodosState, action: PayloadAction<string>) => {
       state.selectedTodoId = action.payload
     },
+    addCycleInTodo: (state: TodosState, action: PayloadAction<void>) => {
+      if (state.selectedTodoId) {
+        state.todos = state.todos.map((todo) => {
+          if (todo.id === state.selectedTodoId) {
+            todo.currentCycles < todo.targetCycles && todo.currentCycles++
+            return todo
+          }
+          return todo
+        })
+      }
+    },
   },
 })
 
-export const { setTodos, addTodo, removeTodo, selectTodo } = todosSlice.actions
+export const { setTodos, addTodo, removeTodo, selectTodo, addCycleInTodo } =
+  todosSlice.actions
 
 //this is to memoize the selection of one Item, if the idToSelect or the item itself does not change, then the cached item is returned without filtering again
 export const getSelectedTodo = createSelector(

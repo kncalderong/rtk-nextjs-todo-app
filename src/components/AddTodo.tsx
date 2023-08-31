@@ -19,6 +19,7 @@ const AddTodo = () => {
         id: todoId,
         text: textRef.current!.value,
         targetCycles: +targetCyclesRef.current!.value,
+        currentCycles: 0,
       })
     )
     resetForm()

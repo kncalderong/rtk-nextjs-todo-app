@@ -18,7 +18,9 @@ const DispalyTodos = () => {
             className='flex justify-between bg-slate-300 px-6 py-3 rounded-lg shadow-sm'
           >
             <div
-              className='cursor-pointer hover:underline font-bold'
+              className={`cursor-pointer hover:underline font-bold ${
+                todo.currentCycles === todo.targetCycles && 'line-through'
+              }`}
               onClick={() => dispatch(selectTodo(todo.id))}
             >
               {todo.text}
