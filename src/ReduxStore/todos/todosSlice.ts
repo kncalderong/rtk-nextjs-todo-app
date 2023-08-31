@@ -25,11 +25,11 @@ export const todosApiSlice = createApi({
       query: () => '/todos',
       transformResponse: (response: any) => {
         console.log('response: ', response)
-        return response
+        return response.data
       },
       providesTags: ['Todos'],
     }),
-    createTodo: builder.mutation<{ todo: TodoItemData }, TodoItem>({
+    createTodo: builder.mutation<{ todo: TodoItem }, TodoItemData>({
       query: (todo) => ({
         url: `/todos`,
         method: 'POST',
@@ -53,6 +53,7 @@ export const todosApiSlice = createApi({
       query: (todo) => ({
         url: `/todos/${todo.id}`,
         method: 'PUT',
+        body: { data: { currentCycles: todo.attributes.currentCycles + 1 } },
       }),
       invalidatesTags: ['Todos'],
       onQueryStarted: async (todo, { dispatch, queryFulfilled }) => {

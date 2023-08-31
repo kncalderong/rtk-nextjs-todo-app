@@ -1,8 +1,10 @@
-export interface TodoItem extends TodoItemData {
+export interface TodoItem {
   id: string
-  createdAt: string
-  updatedAt: string
-  publishedAt: string
+  attributes: {
+    createdAt: string
+    updatedAt: string
+    publishedAt: string
+  } & TodoItemData
 }
 
 export interface TodoItemData {
