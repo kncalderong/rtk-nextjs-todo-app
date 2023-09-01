@@ -2,7 +2,9 @@ import { createSlice, PayloadAction, createSelector } from '@reduxjs/toolkit'
 import { TodoItem, TodoItemData } from '@/types/data/todos'
 import { RootState } from '@/ReduxStore'
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
-import { request, gql, ClientError } from 'graphql-request'
+import { GetTodos } from './graphql/todosQueries'
+import { CreateTodo, DeleteTodo, UpdateTodo } from './graphql/todosMutations'
+
 export interface TodosState {
   deletingTodoId: TodoItem['id'] | undefined
   modifyingTodoId: TodoItem['id'] | undefined
@@ -26,20 +28,7 @@ export const todosApiSlice = createApi({
         url: '/graphql',
         method: 'POST',
         body: {
-          query: gql`
-            query {
-              todos {
-                data {
-                  id
-                  attributes {
-                    text
-                    currentCycles
-                    targetCycles
-                  }
-                }
-              }
-            }
-          `,
+          query: GetTodos,
         },
       }),
       transformResponse: (response: any) => {
@@ -53,20 +42,7 @@ export const todosApiSlice = createApi({
         url: '/graphql',
         method: 'POST',
         body: {
-          query: gql`
-            mutation CreateTodo($data: TodoInput!) {
-              createTodo(data: $data) {
-                data {
-                  id
-                  attributes {
-                    text
-                    targetCycles
-                    currentCycles
-                  }
-                }
-              }
-            }
-          `,
+          query: CreateTodo,
           variables: {
             data: todo,
           },
@@ -79,20 +55,7 @@ export const todosApiSlice = createApi({
         url: '/graphql',
         method: 'POST',
         body: {
-          query: gql`
-            mutation DeleteTodo($id: ID!) {
-              deleteTodo(id: $id) {
-                data {
-                  id
-                  attributes {
-                    text
-                    targetCycles
-                    currentCycles
-                  }
-                }
-              }
-            }
-          `,
+          query: DeleteTodo,
           variables: {
             id: todo.id,
           },
@@ -110,20 +73,7 @@ export const todosApiSlice = createApi({
         url: '/graphql',
         method: 'POST',
         body: {
-          query: gql`
-            mutation UpdateTodo($id: ID!, $data: TodoInput!) {
-              updateTodo(id: $id, data: $data) {
-                data {
-                  id
-                  attributes {
-                    text
-                    targetCycles
-                    currentCycles
-                  }
-                }
-              }
-            }
-          `,
+          query: UpdateTodo,
           variables: {
             id: todo.id,
             data: {
