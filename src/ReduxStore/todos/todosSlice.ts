@@ -2,7 +2,7 @@ import { createSlice, PayloadAction, createSelector } from '@reduxjs/toolkit'
 import { TodoItem, TodoItemData } from '@/types/data/todos'
 import { RootState } from '@/ReduxStore'
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
-
+import { request, gql, ClientError } from 'graphql-request'
 export interface TodosState {
   deletingTodoId: TodoItem['id'] | undefined
   modifyingTodoId: TodoItem['id'] | undefined
@@ -17,30 +17,86 @@ const initialState: TodosState = {
 
 export const todosApiSlice = createApi({
   baseQuery: fetchBaseQuery({
-    baseUrl: 'http://localhost:1337/api',
+    baseUrl: 'http://localhost:1337',
   }),
   tagTypes: ['Todos'],
   endpoints: (builder) => ({
     fetchTodos: builder.query<TodoItem[], void>({
-      query: () => '/todos',
+      query: () => ({
+        url: '/graphql',
+        method: 'POST',
+        body: {
+          query: gql`
+            query {
+              todos {
+                data {
+                  id
+                  attributes {
+                    text
+                    currentCycles
+                    targetCycles
+                  }
+                }
+              }
+            }
+          `,
+        },
+      }),
       transformResponse: (response: any) => {
         console.log('response: ', response)
-        return response.data
+        return response.data.todos.data
       },
       providesTags: ['Todos'],
     }),
     createTodo: builder.mutation<{ todo: TodoItem }, TodoItemData>({
       query: (todo) => ({
-        url: `/todos`,
+        url: '/graphql',
         method: 'POST',
-        body: { data: todo },
+        body: {
+          query: gql`
+            mutation CreateTodo($data: TodoInput!) {
+              createTodo(data: $data) {
+                data {
+                  id
+                  attributes {
+                    text
+                    targetCycles
+                    currentCycles
+                  }
+                }
+              }
+            }
+          `,
+          variables: {
+            data: todo,
+          },
+        },
       }),
       invalidatesTags: ['Todos'],
     }),
     removeTodo: builder.mutation<boolean, TodoItem>({
       query: (todo) => ({
-        url: `todos/${todo.id}`,
-        method: 'DELETE',
+        url: '/graphql',
+        method: 'POST',
+        body: {
+          query: gql`
+            mutation DeleteTodo($id: ID!) {
+              deleteTodo(id: $id) {
+                data {
+                  id
+                  attributes {
+                    text
+                    targetCycles
+                    currentCycles
+                  }
+                }
+              }
+            }
+          `,
+          variables: {
+            id: todo.id,
+          },
+        },
       }),
       invalidatesTags: ['Todos'],
       onQueryStarted: async (todo, { dispatch, queryFulfilled }) => {
@@ -51,9 +107,33 @@ export const todosApiSlice = createApi({
     }),
     updateTodo: builder.mutation<{ todo: TodoItemData }, TodoItem>({
       query: (todo) => ({
-        url: `/todos/${todo.id}`,
-        method: 'PUT',
-        body: { data: { currentCycles: todo.attributes.currentCycles + 1 } },
+        url: '/graphql',
+        method: 'POST',
+        body: {
+          query: gql`
+            mutation UpdateTodo($id: ID!, $data: TodoInput!) {
+              updateTodo(id: $id, data: $data) {
+                data {
+                  id
+                  attributes {
+                    text
+                    targetCycles
+                    currentCycles
+                  }
+                }
+              }
+            }
+          `,
+          variables: {
+            id: todo.id,
+            data: {
+              currentCycles:
+                todo.attributes.currentCycles < todo.attributes.targetCycles
+                  ? todo.attributes.currentCycles + 1
+                  : todo.attributes.currentCycles,
+            },
+          },
+        },
       }),
       invalidatesTags: ['Todos'],
       onQueryStarted: async (todo, { dispatch, queryFulfilled }) => {
